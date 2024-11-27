@@ -1,5 +1,4 @@
 <?php
-
 /**
  * @file
  * Install, update and uninstall functions for this module.
@@ -7,105 +6,137 @@
 
 /**
  * Implements hook_install().
- *
- * Display a message to the admin about activating this module.
  */
 function email_verify_install() {
-  $t = get_t();
-  $link = l($t('administrative settings page'), 'admin/config/system/email_verify');
-  $message = $t('The Email Verify module has been installed and enabled. However, before it can be used, it must be activated and configured on its !adminpage.', array('!adminpage' => $link));
-  drupal_set_message($message);
-}
+  db_update('system')
+    ->fields(array('weight' => 100))
+    ->condition('name', 'email_verify', '=')
+    ->execute();
 
-/**
- * Implements hook_uninstall().
- *
- * Removes variables created by this module.
- */
-function email_verify_uninstall() {
-  // Get global variable array.
-  global $conf;
-  foreach (array_keys($conf) as $key) {
-    // Find variables that have the module name prefixed.
-    if (strpos($key, 'email_verify_') === 0) {
-      variable_del($key);
-    }
-  }
+  $t = get_t();
+  $link = l($t('settings page'), 'admin/config/system/email_verify');
+  $message = $t('The Email Verify module has been installed. Before it can be used, it must be activated and configured on the !adminpage.', array('!adminpage' => $link));
+  backdrop_set_message($message);
 }
 
 /**
  * Implements hook_disable().
  */
 function email_verify_disable() {
-  $email_verify_active = variable_get('email_verify_active', NULL);
-  if ($email_verify_active !== NULL) {
-    // Inactivate this module.
-    variable_set('email_verify_active', FALSE);
+  $active = config_get('email_verify.settings', 'email_verify_active');
+  if ($active) {
+    config_set('email_verify.settings', 'email_verify_active', FALSE);
   }
 }
 
 /**
- * Changes the email_verify_on variable to email_verify_active.
+ * Implements hook_update_last_removed().
  */
-function email_verify_update_7100() {
-  $email_verify_on = variable_get('email_verify_on', NULL);
-  if ($email_verify_on !== NULL) {
-    variable_set('email_verify_active', $email_verify_on);
-    variable_del('email_verify_on');
-  }
+function email_verify_update_last_removed() {
+  // Only require latest 1.x update.
+  return 7100;
 }
 
-/**
- * Updates the selected forms for the new, more flexible way of selecting forms.
- */
-function email_verify_update_7201() {
-  $forms = variable_get('email_verify_forms', '');
-  if (empty($forms)) {
-    // The user registration form.
-    $email_verify_user_registration = variable_get('email_verify_user_registration', NULL);
-    if (!empty($email_verify_user_registration)) {
-      // Add the form to the list.
-      $forms .= "user_register_form, mail\n";
-      // Delete the old variable.
-      variable_del('email_verify_user_registration');
-    }
-    // The user profile form.
-    $email_verify_user_profile = variable_get('email_verify_user_profile', NULL);
-    if (!empty($email_verify_user_profile)) {
-      // Add the form to the list.
-      $forms .= "user_profile_form, mail\n";
-      // Delete the old variable.
-      variable_del('email_verify_user_profile');
-    }
-    // The site-wide contact form.
-    $email_verify_site_contact = variable_get('email_verify_site_contact', NULL);
-    if (!empty($email_verify_site_contact)) {
-      // Add the form to the list.
-      $forms .= "contact_site_form, mail\n";
-      // Delete the old variable.
-      variable_del('email_verify_site_contact');
-    }
-    // The personal contact form.
-    $email_verify_personal_contact = variable_get('email_verify_personal_contact', NULL);
-    if (!empty($email_verify_personal_contact)) {
-      // Add the form to the list.
-      $forms .= "contact_personal_form, mail\n";
-      // Delete the old variable.
-      variable_del('email_verify_personal_contact');
-    }
-    variable_set('email_verify_forms', $forms);
-  }
-}
 
 /**
- * Sets the weight of Email Verify to a high number to process all forms.
+ * Repeat D7's 2.x updates for sites coming from 1.x.
  */
-function email_verify_update_7202() {
+function email_verify_update_1000() {
+  /*******************************************************************************
+   * The following updates were included in the 2.x branch of the Drupal module.
+   * Because the majority of sites were runing 1.x we also include them here.
+   ******************************************************************************/
+  $config = config('email_verify.settings');
+
   // Set the weight of this module as high as reasonable, so that its form_alter
-  // hook gets called after other modules, because sometimes, the hook for this
-  // module is called before the data is available to it.
+  // hook gets called after other modules.
   db_update('system')
-    ->fields(array('weight' => 1000))
+    ->fields(array('weight' => 100))
     ->condition('name', 'email_verify', '=')
     ->execute();
+
+  // Pull the old variable, if available.
+  $forms = explode(', mail\n', update_variable_get('email_verify_forms'));
+  // Pull the new config, if available.
+  $forms_config = config_get('email_verify.settings', 'email_verify_forms');
+  // Combine all forms. if empty, check for individual form variables.
+  if ($forms_config != NULL) {
+    $forms = array_merge($forms_config, $forms);
+  }
+
+  if (empty($forms)) {
+    // The user registration form.
+    $user_registration = update_variable_get('email_verify_user_registration');
+    if (!empty($user_registration)) {
+      $forms[] = "user_register_form, mail\n";
+      update_variable_del('email_verify_user_registration');
+    }
+    // The user profile form.
+    $user_profile = update_variable_get('email_verify_user_profile');
+    if (!empty($user_profile)) {
+      $forms[] = "user_profile_form, mail\n";
+      update_variable_del('email_verify_user_profile');
+    }
+    // The site-wide contact form.
+    $site_contact = update_variable_get('email_verify_site_contact');
+    if (!empty($site_contact)) {
+      $forms[] = "contact_site_form, mail\n";
+      update_variable_del('email_verify_site_contact');
+    }
+    // The personal contact form.
+    $personal_contact = update_variable_get('email_verify_personal_contact');
+    if (!empty($personal_contact)) {
+      $forms[] = "contact_personal_form, mail\n";
+      update_variable_del('email_verify_personal_contact');
+    }
+    $forms_config = implode($forms, "\n");
+    config_set('email_verify.settings', 'email_verify_forms', $forms_config);
+    update_variable_del('email_verify_forms');
+  }
+}
+
+/**
+ * Convert variables to config.
+ */
+function email_verify_update_1001() {
+  // Convert all other variables to config.
+  $config = config('email_verify.settings');
+
+  // Skip 'email_verify_forms' since we handled that in the previous update.
+  $config->set('email_verify_active', update_variable_get('email_verify_active', FALSE));
+
+  $config->set('users_to_display', update_variable_get('email_verify_users_to_display', array()));
+  $config->set('skip_mailbox', update_variable_get('email_verify_active', FALSE));
+
+  // Methods.
+  $config->set('methods_checkdnsrr', update_variable_get('email_verify_methods_checkdnsrr', 1));
+  $config->set('methods_gethostbyname', update_variable_get('email_verify_methods_gethostbyname', 1));
+  $config->set('methods_add_dot', update_variable_get('email_verify_methods_add_dot', 1));
+  $config->set('methods_extra_chars', update_variable_get('email_verify_methods_extra_chars', 1));
+
+  // Test options.
+  $config->set('test_options_host_name',
+    update_variable_get('email_verify_test_options_host_name', 'backdropcms.org'));
+  $config->set('test_options_port_number',
+    update_variable_get('email_verify_test_options_port_number', 25));
+  $config->set('test_options_timeout',
+    update_variable_get('email_verify_test_options_timeout', 15));
+
+  // Debug mode.
+  $config->set('debug_mode',
+    update_variable_get('email_verify_debug_mode', FALSE));
+  $config->set('debug_mode_date_format',
+    update_variable_get('email_verify_debug_mode_date_format', 'long'));
+  $config->set('debug_mode_record_log',
+    update_variable_get('email_verify_debug_mode_record_log', FALSE));
+  $config->set('debug_mode_display_page',
+    update_variable_get('email_verify_debug_mode_display_page', FALSE));
+
+
+  $config->save();
+
+  update_variable_del('email_verify_forms');
+  update_variable_del('email_verify_test_options_host_name');
+  update_variable_del('email_verify_debug_mode_record_log');
+  update_variable_del('email_verify_debug_mode_display_page');
 }

@@ -1,5 +1,4 @@
 <?php
-
 /**
  * @file
  * Checks the email address for validity.
@@ -11,8 +10,9 @@
 function _email_verify_check($mail, $use_caching = FALSE) {
   // Check to see if debugging is enables, and if it is, start collectiong
   // debugging information.
-  $debugging_mode = variable_get('email_verify_debug_mode', FALSE);
-  $date_time_format = variable_get('email_verify_debug_mode_date_format', 'long');
+  $config = config('email_verify.settings');
+  $debugging_mode = $config->get('debug_mode');
+  $date_time_format = $config->get('debug_mode_date_format');
   $debugging_text = array();
   if ($debugging_mode) {
     $debugging_text[] = t(
@@ -78,6 +78,7 @@ function _email_verify_check($mail, $use_caching = FALSE) {
  * Checks the email address for validity.
  */
 function _email_verify_check_internal($mail, $debugging_mode, $debugging_text, $date_time_format) {
+  $config = config('email_verify.settings');
   if ($debugging_mode) {
     $debugging_text[] = t(
       'Checking if the address is syntactically incorrect (!date_time).',
@@ -132,7 +133,7 @@ function _email_verify_check_internal($mail, $debugging_mode, $debugging_text, $
     }
   }
 
-  $host = drupal_substr(strstr($mail, '@'), 1);
+  $host = backdrop_substr(strstr($mail, '@'), 1);
   if ($debugging_mode) {
     $debugging_text[] = t(
       'The host that will be used for verifying the email address is "%host" (!date_time).',
@@ -149,7 +150,7 @@ function _email_verify_check_internal($mail, $debugging_mode, $debugging_text, $
       array('!date_time' => format_date(time(), $date_time_format))
     );
   }
-  if (variable_get('email_verify_methods_add_dot', 1)) {
+  if ($config->get('methods_add_dot')) {
     $host = $host . '.';
     if ($debugging_mode) {
       $debugging_text[] = t(
@@ -178,7 +179,7 @@ function _email_verify_check_internal($mail, $debugging_mode, $debugging_text, $
       array('!date_time' => format_date(time(), $date_time_format))
     );
   }
-  if (variable_get('email_verify_methods_checkdnsrr', 1)) {
+  if ($config->get('methods_checkdnsrr')) {
     if ($debugging_mode) {
       $debugging_text[] = t(
         'The checkdnsrr() method will be used to verify the domain name (!date_time).',
@@ -237,7 +238,7 @@ function _email_verify_check_internal($mail, $debugging_mode, $debugging_text, $
       array('!date_time' => format_date(time(), $date_time_format))
     );
   }
-  if (variable_get('email_verify_methods_gethostbyname', 1)) {
+  if ($config->get('methods_gethostbyname')) {
     if ($debugging_mode) {
       $debugging_text[] = t(
         'The gethostbyname() method will be used to verify the domain name (!date_time).',
@@ -297,7 +298,7 @@ function _email_verify_check_internal($mail, $debugging_mode, $debugging_text, $
       array('!date_time' => format_date(time(), $date_time_format))
     );
   }
-  if (variable_get('email_verify_skip_mailbox', FALSE)) {
+  if ($config->get('skip_mailbox')) {
     if ($debugging_mode) {
       $debugging_text[] = t(
         'The "email_verify_skip_mailbox" variable is set to TRUE, so verification is stopping here (!date_time).',
@@ -351,7 +352,7 @@ function _email_verify_check_internal($mail, $debugging_mode, $debugging_text, $
     }
   }
 
-  $timeout = variable_get('email_verify_test_options_timeout', 15);
+  $timeout = $config->get('test_options_timeout');
   if ($debugging_mode) {
     $debugging_text[] = t(
       'The timeout setting for checking the system capability is "%timeout" seconds (!date_time).',
@@ -500,7 +501,7 @@ function _email_verify_check_internal($mail, $debugging_mode, $debugging_text, $
     );
   }
 
-  $from_address = variable_get('site_mail', ini_get('sendmail_from'));
+  $from_address = config_get('system.core', 'site_mail');
   if ($debugging_mode) {
     $debugging_text[] = t(
       'The email address to use as the From address for the verification tests is "%from_address" (!date_time).',

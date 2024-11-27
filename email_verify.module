@@ -1,5 +1,4 @@
 <?php
-
 /**
  * @file
  * Verifies thoroughly that email addresses are correctly entered.
@@ -9,12 +8,14 @@
  */
 
 /**
- * Implements hook_help().
+ * Implements hook_config_info().
  */
-function email_verify_help($path, $arg) {
-  if ($path == 'admin/help#email_verify') {
-    return '<p>' . t('This module verifies that email addresses are valid during account registration or edit.') . '</p>';
-  }
+function email_verify_config_info() {
+  $prefixes['email_verify.settings'] = array(
+    'label' => t('Email Verify'),
+    'group' => t('Configuration'),
+  );
+  return $prefixes;
 }
 
 /**
@@ -37,7 +38,7 @@ function email_verify_menu() {
   // The route to the system configuration page.
   $items['admin/config/system/email_verify'] = array(
     'title' => 'Email Verify',
-    'page callback' => 'drupal_get_form',
+    'page callback' => 'backdrop_get_form',
     'page arguments' => array('email_verify_admin_settings'),
     'access arguments' => array('administer site configuration'),
     'description' => "Configure the Email Verify module's administrative settings.",
@@ -47,7 +48,7 @@ function email_verify_menu() {
   // The route to the user email address check page.
   $items['admin/people/email_verify'] = array(
     'title' => 'Email Verify',
-    'page callback' => 'drupal_get_form',
+    'page callback' => 'backdrop_get_form',
     'page arguments' => array('email_verify_user_check_form'),
     'access callback' => 'email_verify_access_people_email_verify',
     'type' => MENU_LOCAL_TASK,
@@ -153,7 +154,7 @@ function email_verify_verify_address($form, &$form_state) {
 function email_verify_get_form_fields($form_id) {
   $verify_form_fields = array();
   // Get the list of forms and fields.
-  $email_verify_forms = variable_get('email_verify_forms', '');
+  $email_verify_forms = config_get('email_verify.settings', 'email_verify_forms');
   if (!empty($email_verify_forms)) {
     // Convert the text data into an array of strings, each representing one
     // form/field combination.
@@ -198,11 +199,11 @@ function email_verify_check($mail) {
  *   Indicates whether the module is activated or not.
  */
 function email_verify_activated() {
-  return variable_get('email_verify_active', FALSE);
+  return config_get('email_verify.settings', 'email_verify_active');
 }
 
 /**
- * Displays and/or records the collected debugging information.
+ * Displays and/or logs the collected debugging information.
  *
  * @param array $debug_information
  *   An array of text strings reported during the debugging process.
@@ -211,11 +212,13 @@ function email_verify_process_debug_information(array $debug_information) {
   if (!empty($debug_information)) {
     // Log and/or display the debugging information.
     $message = implode('<br />', $debug_information);
-    if (variable_get('email_verify_debug_mode_record_log', FALSE)) {
+    $debug_mode_record_log = config_get('email_verify.settings', 'email_verify_debug_mode_record_log');
+    if ($debug_mode_record_log) {
       watchdog('email_verify debug', $message, array(), WATCHDOG_DEBUG);
     }
-    if (variable_get('email_verify_debug_mode_display_page', FALSE)) {
-      drupal_set_message($message);
+    $debug_mode_display_page = config_get('email_verify.settings', 'email_verify_debug_mode_display_page');
+    if ($debug_mode_display_page) {
+      backdrop_set_message($message);
     }
   }
 }

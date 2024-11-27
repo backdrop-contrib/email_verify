@@ -1,5 +1,4 @@
 <?php
-
 /**
  * @file
  * User email check menu callback file for email_verify module.
@@ -18,7 +17,7 @@
  */
 function email_verify_user_check_form(array $form, array &$form_state) {
   if (!empty($form_state['input'])) {
-    drupal_set_message(t('Look for the verification results below the form.'));
+    backdrop_set_message(t('Look for the verification results below the form.'));
   }
 
   $form['header'] = array(
@@ -83,7 +82,7 @@ function email_verify_user_check_form(array $form, array &$form_state) {
   );
 
   // Get any records that have been stored to display.
-  $rows = variable_get('email_verify_users_to_display', array());
+  $rows = config_get('email_verify.settings', 'users_to_display');
   $user_rows = $rows;
 
   $headers = _email_verify_get_header();
@@ -148,7 +147,7 @@ function email_verify_user_check_form_validate($form, &$form_state) {
  */
 function email_verify_user_check_form_submit($form, &$form_state) {
   // Clear any saved data.
-  variable_del('email_verify_users_to_display');
+  config_set('email_verify.settings', 'users_to_display', array());
 
   $disabled_users = FALSE;
   if (isset($form_state['values']['disabled']) && $form_state['values']['disabled'] == 1) {
@@ -188,7 +187,7 @@ function email_verify_user_check_form_submit($form, &$form_state) {
     'progress_message' => t('Completed @current of @total operations.'),
     'error_message' => t('One or more errors were encountered processing the users.'),
     'finished' => '_email_verify_batch_finish_batch',
-    'file' => drupal_get_path('module', 'email_verify') . '/email_verify.check.inc',
+    'file' => backdrop_get_path('module', 'email_verify') . '/email_verify.check.inc',
   );
 
   // Set the batch.
@@ -359,14 +358,14 @@ function _email_verify_batch_finish_batch($success, $results, $operations) {
   if ($success) {
     if (!empty($results['users_to_display'])) {
       // Save the collected data for display.
-      variable_set('email_verify_users_to_display', $results['users_to_display']);
+      config_set('email_verify.settings', 'users_to_display', $results['users_to_display']);
     }
   }
   else {
     // An error occurred. $operations contains the operations that remained
     // unprocessed.
     $error_operation = reset($operations);
-    drupal_set_message(
+    backdrop_set_message(
       t('An error occurred while processing @operation with arguments : @args',
         array(
           '@operation' => $error_operation[0],
