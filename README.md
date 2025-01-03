@@ -1,4 +1,4 @@
-Eamil Verify
+Email Verify
 ======================
 
 Copyright: Daniel Bonniot <bonniot@users.sourceforge.net>
